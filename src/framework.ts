@@ -61,6 +61,7 @@ export class Framework {
 	}
 
 	close() {
+		this.agent.close();
 		this.channel.close();
 	}
 }

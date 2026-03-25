@@ -1,6 +1,6 @@
 import { EventEmitter } from "@/emitter";
 import type { LLM } from "@/llm";
-import type { AssistantMessage, Message } from "@/llm/types";
+import type { AssistantMessage, Message, Response } from "@/llm/types";
 
 export type AgentEvents = {
 	assistant: (message: AssistantMessage) => void | Promise<void>;
@@ -12,12 +12,21 @@ export type AgentStates = "loop" | "idle";
 
 export class Agent {
 	private state: AgentStates = "idle";
+	private abortController = new AbortController();
 	readonly events = new EventEmitter<AgentEvents>();
 
 	constructor(private llm: LLM) {}
 
 	async iteration(messages: Message[]) {
-		const response = await this.llm.messages(messages);
+		let response: Response;
+
+		try {
+			response = await this.llm.messages(messages, this.abortController.signal);
+		} catch {
+			this.switch("idle");
+			return;
+		}
+
 		const choice = response.choices[0];
 		if (!choice) throw new Error("No response from LLM");
 
@@ -49,6 +58,10 @@ export class Agent {
 	private switch(target: AgentStates) {
 		this.state = target;
 		this.events.emit(target);
+	}
+
+	close() {
+		this.abortController.abort();
 	}
 
 	getState() {
