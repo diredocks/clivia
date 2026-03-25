@@ -1,70 +1,103 @@
 import { EventEmitter } from "@/emitter";
 import type { LLM } from "@/llm";
-import type { AssistantMessage, Message, Response } from "@/llm/types";
+import type {
+  AssistantMessage,
+  Response,
+  ToolCall,
+  ToolResult,
+} from "@/llm/types";
+import type { Session } from "@/session";
 
 export type AgentEvents = {
-	assistant: (message: AssistantMessage) => void | Promise<void>;
-	idle: () => void | Promise<void>;
-	loop: () => void | Promise<void>;
+  assistant: (message: AssistantMessage) => void | Promise<void>;
+  idle: () => void | Promise<void>;
+  loop: () => void | Promise<void>;
 };
 
 export type AgentStates = "loop" | "idle";
 
 export class Agent {
-	private state: AgentStates = "idle";
-	private abortController = new AbortController();
-	readonly events = new EventEmitter<AgentEvents>();
+  private state: AgentStates = "idle";
+  private abortController = new AbortController();
+  readonly events = new EventEmitter<AgentEvents>();
 
-	constructor(private llm: LLM) {}
+  constructor(
+    private llm: LLM,
+    private session: Session,
+  ) {}
 
-	async iteration(messages: Message[]) {
-		let response: Response;
+  async iteration() {
+    let response: Response;
 
-		try {
-			response = await this.llm.messages(messages, this.abortController.signal);
-		} catch {
-			this.switch("idle");
-			return;
-		}
+    try {
+      response = await this.llm.messages(
+        this.session.messages,
+        this.session.tools.map((e) => e.toDefinition()),
+        this.abortController.signal,
+      );
+    } catch {
+      this.switch("idle");
+      return;
+    }
 
-		const choice = response.choices[0];
-		if (!choice) throw new Error("No response from LLM");
+    const choice = response.choices[0];
+    if (!choice) throw new Error("No response from LLM");
 
-		messages.push(choice.message);
+    this.session.messages.push(choice.message);
 
-		if (choice.message.role !== "assistant") {
-			throw Error("LLM responded message which role != assistant");
-		}
+    if (choice.message.role !== "assistant") {
+      throw Error("LLM responded message which role != assistant");
+    }
 
-		if (choice.message.content.trim()) {
-			this.events.emit("assistant", choice.message);
-		}
+    if (choice.message.content.trim()) {
+      this.events.emit("assistant", choice.message);
+    }
 
-		if (choice.message.toolCalls?.length) {
-			// await this.handleToolCalls(messages, choice.message.toolCalls, tools);
-			throw new Error("Tool calling not implemented yet");
-		} else {
-			this.switch("idle");
-		}
-	}
+    if (choice.message.toolCalls?.length) {
+      await this.handleToolCalls(choice.message.toolCalls);
+    } else {
+      this.switch("idle");
+    }
+  }
 
-	async loop(messages: Message[]) {
-		this.switch("loop");
-		while (this.state === "loop") {
-			await this.iteration(messages);
-		}
-	}
+  async loop() {
+    this.switch("loop");
+    while (this.state === "loop") {
+      await this.iteration();
+    }
+  }
 
-	private switch(target: AgentStates) {
-		this.state = target;
-		this.events.emit(target);
-	}
+  private async handleToolCalls(toolCalls: ToolCall[]) {
+    for (const toolCall of toolCalls) {
+      const tool = this.session.tools.find((t) => t.name === toolCall.name);
+      if (!tool) {
+        this.session.messages.push({
+          role: "tool",
+          toolCallId: toolCall.id,
+          content: `Error: Unknown tool '${toolCall.name}'`,
+        });
+        continue;
+      }
 
-	close() {
-		this.abortController.abort();
-	}
+      const result: ToolResult = await tool.invoke(toolCall);
+      this.session.messages.push({
+        role: "tool",
+        toolCallId: result.toolCallId,
+        content: result.content,
+      });
+    }
+  }
 
-	getState() {
-		return this.state;
-	}
+  private switch(target: AgentStates) {
+    this.state = target;
+    this.events.emit(target);
+  }
+
+  close() {
+    this.abortController.abort();
+  }
+
+  getState() {
+    return this.state;
+  }
 }
