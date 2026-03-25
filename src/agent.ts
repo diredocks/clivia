@@ -54,7 +54,9 @@ export class Agent {
     }
 
     if (choice.message.toolCalls?.length) {
-      await this.handleToolCalls(choice.message.toolCalls);
+      for (const toolCall of choice.message.toolCalls) {
+        await this.handleToolCalls(toolCall);
+      }
     } else {
       this.switch("idle");
     }
@@ -67,29 +69,27 @@ export class Agent {
     }
   }
 
-  private async handleToolCalls(toolCalls: ToolCall[]) {
-    for (const toolCall of toolCalls) {
-      const tool = this.session.tools.find((t) => t.name === toolCall.name);
-      if (!tool) {
-        this.session.messages.push({
-          role: "tool",
-          toolCallId: toolCall.id,
-          content: `Error: Unknown tool '${toolCall.name}'`,
-        });
-        continue;
-      }
-
-      const result: ToolResult = await tool.invoke(
-        toolCall,
-        this.session,
-        this.llm,
-      );
+  private async handleToolCalls(toolCall: ToolCall) {
+    const tool = this.session.tools.find((t) => t.name === toolCall.name);
+    if (!tool) {
       this.session.messages.push({
         role: "tool",
-        toolCallId: result.toolCallId,
-        content: result.content,
+        toolCallId: toolCall.id,
+        content: `Error: Unknown tool '${toolCall.name}'`,
       });
+      return;
     }
+
+    const result: ToolResult = await tool.invoke(
+      toolCall,
+      this.session,
+      this.llm,
+    );
+    this.session.messages.push({
+      role: "tool",
+      toolCallId: result.toolCallId,
+      content: result.content,
+    });
   }
 
   private switch(target: AgentStates) {

@@ -53,7 +53,8 @@ export class Framework {
         return true;
       }
       case ",quit":
-      case ",exit": {
+      case ",exit":
+      case ",close": {
         this.close();
         return true;
       }
