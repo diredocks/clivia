@@ -11,7 +11,7 @@ export class CLIChannel extends Channel {
 
   send(message: AssistantMessage | string) {
     if (typeof message === "string") {
-      process.stdout.write(message);
+      process.stdout.write(`${message}\n`);
       return;
     }
     process.stdout.write(`${message.content}\n`);

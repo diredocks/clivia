@@ -47,24 +47,32 @@ export class Framework {
   }
 
   actions(content: string) {
-    switch (content) {
-      case ",help": {
-        this.channel.send("o_0?!\n");
-        return true;
-      }
-      case ",quit":
-      case ",exit":
-      case ",close": {
+    if (!content.startsWith(",")) return false;
+    const action = content.slice(1);
+    switch (action) {
+      case "quit":
+      case "exit":
+      case "close": {
         this.close();
         return true;
       }
-      case ",status": {
-        this.channel.send(`${this.agent.getState()}\n`);
+      case "help": {
+        this.channel.send("i'm too lazy to write help");
+        return true;
+      }
+      case "session": {
+        this.channel.send(
+          `count=${this.session.messages.length} tool=${this.session.messages.filter((e) => e.role === "tool").length}`,
+        );
+        return true;
+      }
+      case "status": {
+        this.channel.send(`${this.agent.getState()}`);
         return true;
       }
     }
-
-    return false;
+    this.channel.send(`unknown action "${action}"`);
+    return true;
   }
 
   start() {
