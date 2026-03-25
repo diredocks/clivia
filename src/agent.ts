@@ -4,10 +4,14 @@ import type { AssistantMessage, Message } from "@/llm/types";
 
 export type AgentEvents = {
 	assistant: (message: AssistantMessage) => void | Promise<void>;
+	idle: () => void | Promise<void>;
+	loop: () => void | Promise<void>;
 };
 
+export type AgentStates = "loop" | "idle";
+
 export class Agent {
-	private state: "loop" | "idle" = "idle";
+	private state: AgentStates = "idle";
 	readonly events = new EventEmitter<AgentEvents>();
 
 	constructor(private llm: LLM) {}
@@ -19,25 +23,32 @@ export class Agent {
 
 		messages.push(choice.message);
 
-		if (choice.message.role === "assistant") {
-			if (choice.message.content.trim()) {
-				this.events.emit("assistant", choice.message);
-			}
+		if (choice.message.role !== "assistant") {
+			throw Error("LLM responded message which role != assistant");
+		}
 
-			if (choice.message.toolCalls?.length) {
-				// await this.handleToolCalls(messages, choice.message.toolCalls, tools);
-				throw new Error("Not Implemented");
-			} else {
-				this.state = "idle";
-			}
+		if (choice.message.content.trim()) {
+			this.events.emit("assistant", choice.message);
+		}
+
+		if (choice.message.toolCalls?.length) {
+			// await this.handleToolCalls(messages, choice.message.toolCalls, tools);
+			throw new Error("Tool calling not implemented yet");
+		} else {
+			this.switch("idle");
 		}
 	}
 
 	async loop(messages: Message[]) {
-		this.state = "loop";
+		this.switch("loop");
 		while (this.state === "loop") {
 			await this.iteration(messages);
 		}
+	}
+
+	private switch(target: AgentStates) {
+		this.state = target;
+		this.events.emit(target);
 	}
 
 	getState() {
