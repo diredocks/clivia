@@ -23,6 +23,7 @@ export class Framework {
 
 	async onReceived(content: string) {
 		if (this.actions(content)) return;
+		if (content.trim() === "") return;
 		this.queue.push({ role: "user", content });
 		this.processQueue();
 	}
@@ -37,12 +38,17 @@ export class Framework {
 
 	actions(content: string) {
 		switch (content) {
-			case ",quit": {
+			case ",help": {
+				this.channel.send("o_0?!\n");
+				return true;
+			}
+			case ",quit":
+			case ",exit": {
 				this.close();
 				return true;
 			}
 			case ",status": {
-				console.log(this.agent.getState());
+				this.channel.send(`${this.agent.getState()}\n`);
 				return true;
 			}
 		}

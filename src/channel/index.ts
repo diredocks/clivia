@@ -9,7 +9,7 @@ export abstract class Channel {
 	readonly events = new EventEmitter<ChannelEvents>();
 
 	abstract prepare(): boolean | Promise<boolean>;
-	abstract send(message: AssistantMessage): void | Promise<void>;
+	abstract send(message: AssistantMessage | string): void | Promise<void>;
 	abstract start(): void | Promise<void>;
 	abstract close(): void | Promise<void>;
 }
