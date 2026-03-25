@@ -1,10 +1,6 @@
-import type {
-  Message,
-  Tool,
-  ToolCall,
-  ToolParameters,
-  ToolResult,
-} from "@/llm/types";
+import type { LLM } from "@/llm";
+import type { Tool, ToolCall, ToolParameters, ToolResult } from "@/llm/types";
+import type { Session } from "@/session";
 
 export abstract class ToolBase {
   abstract readonly name: string;
@@ -13,7 +9,8 @@ export abstract class ToolBase {
 
   abstract execute(
     args: Record<string, unknown>,
-    messages?: Message[],
+    session: Session,
+    llm: LLM,
   ): Promise<string> | string;
 
   toDefinition(): Tool {
@@ -24,7 +21,11 @@ export abstract class ToolBase {
     };
   }
 
-  async invoke(toolCall: ToolCall, messages?: Message[]): Promise<ToolResult> {
+  async invoke(
+    toolCall: ToolCall,
+    session: Session,
+    llm: LLM,
+  ): Promise<ToolResult> {
     let args: Record<string, unknown>;
     try {
       args = JSON.parse(toolCall.arguments) as Record<string, unknown>;
@@ -36,7 +37,7 @@ export abstract class ToolBase {
     }
 
     try {
-      const result = await this.execute(args, messages);
+      const result = await this.execute(args, session, llm);
       return {
         toolCallId: toolCall.id,
         content: result,

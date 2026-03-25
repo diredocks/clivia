@@ -79,7 +79,11 @@ export class Agent {
         continue;
       }
 
-      const result: ToolResult = await tool.invoke(toolCall);
+      const result: ToolResult = await tool.invoke(
+        toolCall,
+        this.session,
+        this.llm,
+      );
       this.session.messages.push({
         role: "tool",
         toolCallId: result.toolCallId,

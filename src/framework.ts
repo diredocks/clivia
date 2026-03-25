@@ -2,10 +2,15 @@ import { Agent } from "@/agent";
 import type { Channel } from "@/channel";
 import type { LLM } from "@/llm";
 import type { AssistantMessage, UserMessage } from "@/llm/types";
-import type { Session } from "./session";
+import type { Session } from "@/session";
+import { ExecTool } from "@/tool/exec";
+import { SubAgent } from "@/tool/subagent";
 
 export class Framework {
-  private session: Session = { messages: [], tools: [] };
+  private session: Session = {
+    messages: [],
+    tools: [new ExecTool(), new SubAgent()],
+  };
   private agent: Agent;
   private queue: UserMessage[] = [];
 
