@@ -22,7 +22,7 @@ export class CLIChannel extends Channel {
 		this.rl = createInterface({
 			input: process.stdin,
 			output: process.stdout,
-			// terminal: false,
+			terminal: false,
 		});
 
 		this.rl.on("line", (line) => this.events.emit("receive", line));
