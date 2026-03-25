@@ -60,6 +60,7 @@ export class SubAgent extends ToolBase {
         },
       ],
       tools: session.tools.filter((t) => t.name !== "subagent"),
+      abortController: session.abortController,
     };
     const agent = new Agent(llm, subSession);
     await agent.loop();

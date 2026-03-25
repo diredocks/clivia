@@ -18,7 +18,6 @@ export type AgentStates = "loop" | "idle";
 
 export class Agent {
   private state: AgentStates = "idle";
-  private abortController = new AbortController();
   readonly events = new EventEmitter<AgentEvents>();
 
   constructor(
@@ -33,11 +32,14 @@ export class Agent {
       response = await this.llm.messages(
         this.session.messages,
         this.session.tools.map((e) => e.toDefinition()),
-        this.abortController.signal,
+        this.session.abortController.signal,
       );
-    } catch {
-      this.switch("idle");
-      return;
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        this.switch("idle");
+        return;
+      }
+      throw err;
     }
 
     const choice = response.choices[0];
@@ -98,7 +100,7 @@ export class Agent {
   }
 
   close() {
-    this.abortController.abort();
+    this.session.abortController.abort();
   }
 
   getState() {

@@ -10,6 +10,7 @@ export class Framework {
   private session: Session = {
     messages: [],
     tools: [new ExecTool(), new SubAgent()],
+    abortController: new AbortController(),
   };
   private agent: Agent;
   private queue: UserMessage[] = [];

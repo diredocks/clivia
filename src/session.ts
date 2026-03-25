@@ -4,4 +4,5 @@ import type { ToolBase } from "@/tool";
 export interface Session {
   messages: Message[];
   tools: ToolBase[];
+  abortController: AbortController;
 }
