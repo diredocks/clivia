@@ -9,6 +9,10 @@ import type {
   UserMessage,
 } from "@/llm/types";
 
+// TODO: memory system and skill discovery
+// TODO: session save / reload
+// TODO: heartbeat / cron
+
 export class Framework {
   private agent: Agent;
   private queue: UserMessage[] = [];

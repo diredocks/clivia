@@ -9,6 +9,8 @@ import type {
   ToolResult,
 } from "@/llm/types";
 
+// TODO: agent manager
+
 export type AgentEvents = {
   assistant: (message: AssistantMessage) => void | Promise<void>;
   idle: () => void | Promise<void>;

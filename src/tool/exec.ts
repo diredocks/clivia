@@ -1,6 +1,8 @@
 import type { ToolParameters } from "@/llm/types";
 import { ToolBase } from "@/tool";
 
+// TODO: timeout, black and white list
+
 export class ExecTool extends ToolBase {
   readonly name = "exec";
   readonly description =

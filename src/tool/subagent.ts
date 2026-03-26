@@ -4,6 +4,8 @@ import type { LLM } from "@/llm";
 import type { ToolParameters } from "@/llm/types";
 import { ToolBase } from "@/tool";
 
+// TODO: Previous context
+
 const SUBAGENT_SYSTEM_PROMPT = `
 Execute the task exactly and return only the result.
 Any extra content is considered an error.

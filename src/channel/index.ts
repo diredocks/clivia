@@ -1,6 +1,8 @@
 import { EventEmitter } from "@/emitter";
 import type { AssistantMessage } from "@/llm/types";
 
+// TODO: support for Telegram and Feishu
+
 export type ChannelEvents = {
   receive: (content: string) => void;
 };
