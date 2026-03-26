@@ -1,7 +1,7 @@
 import type { ToolParameters } from "@/llm/types";
 import { ToolBase } from "@/tool";
 
-// TODO: timeout, black and white list
+// TODO: timeout, background, black and white list
 
 export class ExecTool extends ToolBase {
   readonly name = "exec";
@@ -31,16 +31,12 @@ export class ExecTool extends ToolBase {
       stderr: "pipe",
     });
 
-    const [stdout, stderr, exitCode] = await Promise.all([
+    const [stdout, _stderr, _exitCode] = await Promise.all([
       new Response(proc.stdout).text(),
       new Response(proc.stderr).text(),
       proc.exited,
     ]);
 
-    return JSON.stringify({
-      exitCode,
-      stdout: stdout.trim() ?? "(empty)",
-      stderr: stderr.trim() ?? "(empty)",
-    });
+    return stdout.trim() ?? "(empty)";
   }
 }
