@@ -1,3 +1,4 @@
+import type { Context } from "@/context";
 import { EventEmitter } from "@/emitter";
 import type { LLM } from "@/llm";
 import type {
@@ -7,7 +8,6 @@ import type {
   ToolMessage,
   ToolResult,
 } from "@/llm/types";
-import type { Session } from "@/session";
 
 export type AgentEvents = {
   assistant: (message: AssistantMessage) => void | Promise<void>;
@@ -25,7 +25,7 @@ export class Agent {
 
   constructor(
     private llm: LLM,
-    private session: Session,
+    private context: Context,
   ) {}
 
   async iteration() {
@@ -33,9 +33,9 @@ export class Agent {
 
     try {
       response = await this.llm.messages(
-        this.session.messages,
-        this.session.tools.map((e) => e.toDefinition()),
-        this.session.abortController.signal,
+        this.context.messages,
+        this.context.tools.map((e) => e.toDefinition()),
+        this.context.abortController.signal,
       );
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
@@ -48,7 +48,7 @@ export class Agent {
     const choice = response.choices[0];
     if (!choice) throw new Error("No response from LLM");
 
-    this.session.messages.push(choice.message);
+    this.context.messages.push(choice.message);
 
     if (choice.message.role !== "assistant") {
       throw Error("LLM responded message which role != assistant");
@@ -83,19 +83,15 @@ export class Agent {
       content: "",
     } as ToolMessage;
 
-    const tool = this.session.tools.find((t) => t.name === call.name);
+    const tool = this.context.tools.find((t) => t.name === call.name);
     if (tool) {
-      const result: ToolResult = await tool.invoke(
-        call,
-        this.session,
-        this.llm,
-      );
+      const result: ToolResult = await tool.invoke(call, this.llm);
       message.content = result.content;
     } else {
       message.content = `Error: Unknown tool '${call.name}'`;
     }
 
-    this.session.messages.push(message);
+    this.context.messages.push(message);
     this.events.emit("toolResult", message);
   }
 
@@ -105,10 +101,10 @@ export class Agent {
   }
 
   close() {
-    this.session.abortController.abort();
+    this.context.abortController.abort();
   }
 
-  getState() {
+  get State() {
     return this.state;
   }
 }

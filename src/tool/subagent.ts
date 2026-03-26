@@ -1,7 +1,7 @@
 import { Agent } from "@/agent";
+import { contextManager } from "@/context";
 import type { LLM } from "@/llm";
 import type { ToolParameters } from "@/llm/types";
-import type { Session } from "@/session";
 import { ToolBase } from "@/tool";
 
 const SUBAGENT_SYSTEM_PROMPT = `
@@ -26,7 +26,6 @@ export class SubAgent extends ToolBase {
 
   override async execute(
     args: Record<string, unknown>,
-    session: Session,
     llm: LLM,
   ): Promise<string> {
     const { prompt } = args;
@@ -35,29 +34,22 @@ export class SubAgent extends ToolBase {
       throw new Error("Argument 'prompt' must be a non-empty string.");
     }
 
-    const subSession: Session = {
-      messages: [
-        {
-          role: "system",
-          content: SUBAGENT_SYSTEM_PROMPT,
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      tools: session.tools.filter((t) => t.name !== "subagent"),
-      abortController: session.abortController,
-    };
-    const agent = new Agent(llm, subSession);
+    const [id, context] = contextManager.create([
+      { role: "system", content: SUBAGENT_SYSTEM_PROMPT },
+      { role: "user", content: prompt },
+    ]);
+    context.tools = context.tools.filter((t) => t.name !== "subagent");
+
+    const agent = new Agent(llm, context);
     await agent.loop();
 
-    const last = subSession.messages[subSession.messages.length - 1];
+    const last = context.messages[context.messages.length - 1];
 
     if (!last || last.role !== "assistant" || !last.content?.trim()) {
       throw new Error("Sub-agent returned empty result.");
     }
 
+    contextManager.delete(id);
     return last.content;
   }
 }

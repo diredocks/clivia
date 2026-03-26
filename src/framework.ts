@@ -1,5 +1,6 @@
 import { Agent } from "@/agent";
 import type { Channel } from "@/channel";
+import { type Context, contextManager } from "@/context";
 import type { LLM } from "@/llm";
 import type {
   AssistantMessage,
@@ -7,26 +8,20 @@ import type {
   ToolMessage,
   UserMessage,
 } from "@/llm/types";
-import type { Session } from "@/session";
-import { ExecTool } from "@/tool/exec";
-import { SubAgent } from "@/tool/subagent";
 
 export class Framework {
-  private session: Session = {
-    messages: [],
-    tools: [new ExecTool(), new SubAgent()],
-    abortController: new AbortController(),
-  };
   private agent: Agent;
   private queue: UserMessage[] = [];
+  private context: Context;
 
   constructor(
-    private llm: LLM,
-    private channel: Channel,
+    readonly llm: LLM,
+    readonly channel: Channel,
   ) {
     if (!channel.prepare()) throw new Error("Failed to prepare channel");
+    [, this.context] = contextManager.create([], "root");
 
-    this.agent = new Agent(this.llm, this.session);
+    this.agent = new Agent(this.llm, this.context);
 
     this.agent.events.on("assistant", (message) => this.onAssistant(message));
     this.agent.events.on("idle", () => this.processQueue());
@@ -47,9 +42,9 @@ export class Framework {
   }
 
   private async processQueue() {
-    if (this.agent.getState() === "loop") return;
+    if (this.agent.State === "loop") return;
     if (this.queue.length === 0) return;
-    this.session.messages.push(...this.queue);
+    this.context.messages.push(...this.queue);
     this.queue = [];
     await this.agent.loop();
   }
@@ -80,14 +75,18 @@ export class Framework {
         this.channel.send("i'm too lazy to write help");
         return true;
       }
-      case "session": {
+      case "context": {
+        this.channel.send(`count=${contextManager.list().length}`);
+        return true;
+      }
+      case "context.root": {
         this.channel.send(
-          `count=${this.session.messages.length} tool=${this.session.messages.filter((e) => e.role === "tool").length}`,
+          `count=${this.context.messages.length} tool=${this.context.messages.filter((e) => e.role === "tool").length}`,
         );
         return true;
       }
       case "status": {
-        this.channel.send(`${this.agent.getState()}`);
+        this.channel.send(`${this.agent.State}`);
         return true;
       }
     }
@@ -100,6 +99,7 @@ export class Framework {
   }
 
   close() {
+    contextManager.clear();
     this.agent.close();
     this.channel.close();
   }
