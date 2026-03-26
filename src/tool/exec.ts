@@ -35,10 +35,10 @@ export class ExecTool extends ToolBase {
       proc.exited,
     ]);
 
-    return [
-      `exitCode: ${exitCode}`,
-      `stdout:\n${stdout.trim() || "(empty)"}`,
-      `stderr:\n${stderr.trim() || "(empty)"}`,
-    ].join("\n\n");
+    return JSON.stringify({
+      exitCode,
+      stdout: stdout.trim() ?? "(empty)",
+      stderr: stderr.trim() ?? "(empty)",
+    });
   }
 }

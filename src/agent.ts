@@ -4,6 +4,7 @@ import type {
   AssistantMessage,
   Response,
   ToolCall,
+  ToolMessage,
   ToolResult,
 } from "@/llm/types";
 import type { Session } from "@/session";
@@ -12,6 +13,8 @@ export type AgentEvents = {
   assistant: (message: AssistantMessage) => void | Promise<void>;
   idle: () => void | Promise<void>;
   loop: () => void | Promise<void>;
+  toolCall: (call: ToolCall) => void | Promise<void>;
+  toolResult: (message: ToolMessage) => void | Promise<void>;
 };
 
 export type AgentStates = "loop" | "idle";
@@ -56,9 +59,10 @@ export class Agent {
     }
 
     if (choice.message.toolCalls?.length) {
-      for (const toolCall of choice.message.toolCalls) {
-        await this.handleToolCalls(toolCall);
+      for (const call of choice.message.toolCalls) {
+        await this.handleToolCalls(call);
       }
+      this.switch("loop");
     } else {
       this.switch("idle");
     }
@@ -71,27 +75,28 @@ export class Agent {
     }
   }
 
-  private async handleToolCalls(toolCall: ToolCall) {
-    const tool = this.session.tools.find((t) => t.name === toolCall.name);
-    if (!tool) {
-      this.session.messages.push({
-        role: "tool",
-        toolCallId: toolCall.id,
-        content: `Error: Unknown tool '${toolCall.name}'`,
-      });
-      return;
+  private async handleToolCalls(call: ToolCall) {
+    this.events.emit("toolCall", call);
+    const message = {
+      role: "tool",
+      toolCallId: call.id,
+      content: "",
+    } as ToolMessage;
+
+    const tool = this.session.tools.find((t) => t.name === call.name);
+    if (tool) {
+      const result: ToolResult = await tool.invoke(
+        call,
+        this.session,
+        this.llm,
+      );
+      message.content = result.content;
+    } else {
+      message.content = `Error: Unknown tool '${call.name}'`;
     }
 
-    const result: ToolResult = await tool.invoke(
-      toolCall,
-      this.session,
-      this.llm,
-    );
-    this.session.messages.push({
-      role: "tool",
-      toolCallId: result.toolCallId,
-      content: result.content,
-    });
+    this.session.messages.push(message);
+    this.events.emit("toolResult", message);
   }
 
   private switch(target: AgentStates) {

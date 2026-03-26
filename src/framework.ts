@@ -1,7 +1,12 @@
 import { Agent } from "@/agent";
 import type { Channel } from "@/channel";
 import type { LLM } from "@/llm";
-import type { AssistantMessage, UserMessage } from "@/llm/types";
+import type {
+  AssistantMessage,
+  ToolCall,
+  ToolMessage,
+  UserMessage,
+} from "@/llm/types";
 import type { Session } from "@/session";
 import { ExecTool } from "@/tool/exec";
 import { SubAgent } from "@/tool/subagent";
@@ -25,6 +30,8 @@ export class Framework {
 
     this.agent.events.on("assistant", (message) => this.onAssistant(message));
     this.agent.events.on("idle", () => this.processQueue());
+    this.agent.events.on("toolCall", (call) => this.onToolCall(call));
+    this.agent.events.on("toolResult", (message) => this.onToolResult(message));
     this.channel.events.on("receive", (content) => this.onReceived(content));
   }
 
@@ -45,6 +52,18 @@ export class Framework {
     this.session.messages.push(...this.queue);
     this.queue = [];
     await this.agent.loop();
+  }
+
+  private async onToolCall(call: ToolCall) {
+    this.channel.send(
+      `tool.call id=${call.id} name=${call.name} args=${call.arguments}`,
+    );
+  }
+
+  private async onToolResult(message: ToolMessage) {
+    this.channel.send(
+      `tool.result id=${message.toolCallId} content=${message.content}`,
+    );
   }
 
   actions(content: string) {
