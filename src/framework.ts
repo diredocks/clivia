@@ -24,7 +24,7 @@ export class Framework {
     this.agent = new Agent(this.llm, this.context);
 
     this.agent.events.on("assistant", (message) => this.onAssistant(message));
-    this.agent.events.on("idle", () => this.processQueue());
+    this.agent.events.on("idle", () => this.flush());
     this.agent.events.on("toolCall", (call) => this.onToolCall(call));
     this.agent.events.on("toolResult", (message) => this.onToolResult(message));
     this.channel.events.on("receive", (content) => this.onReceived(content));
@@ -38,14 +38,16 @@ export class Framework {
     if (this.actions(content)) return;
     if (content.trim() === "") return;
     this.queue.push({ role: "user", content });
-    this.processQueue();
+    this.flush();
   }
 
-  private async processQueue() {
+  private async flush() {
     if (this.agent.State === "loop") return;
     if (this.queue.length === 0) return;
+
     this.context.messages.push(...this.queue);
     this.queue = [];
+
     await this.agent.loop();
   }
 
