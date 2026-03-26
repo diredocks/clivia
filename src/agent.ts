@@ -64,7 +64,6 @@ export class Agent {
       for (const call of choice.message.toolCalls) {
         await this.handleToolCalls(call);
       }
-      this.switch("loop");
     } else {
       this.switch("idle");
     }
