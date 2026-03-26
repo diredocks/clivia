@@ -61,9 +61,7 @@ export class Framework {
   }
 
   private async onToolResult(message: ToolMessage) {
-    this.channel.send(
-      `tool.result id=${message.toolCallId} content=${message.content}`,
-    );
+    this.channel.send(`tool.result id=${message.toolCallId}`);
   }
 
   actions(content: string) {
