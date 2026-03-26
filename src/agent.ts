@@ -9,8 +9,6 @@ import type {
   ToolResult,
 } from "@/llm/types";
 
-// TODO: agent manager
-
 export type AgentEvents = {
   assistant: (message: AssistantMessage) => void | Promise<void>;
   idle: () => void | Promise<void>;
@@ -109,3 +107,40 @@ export class Agent {
     return this.state;
   }
 }
+
+export class AgentManager {
+  private agents: Map<string, Agent> = new Map();
+
+  create(llm: LLM, context: Context, id?: string): [string, Agent] {
+    const Id = id ?? crypto.randomUUID();
+    const agent = new Agent(llm, context);
+    this.agents.set(Id, agent);
+    return [Id, agent];
+  }
+
+  get(id: string): Agent | undefined {
+    return this.agents.get(id);
+  }
+
+  require(id: string): Agent {
+    const agent = this.agents.get(id);
+    if (!agent) {
+      throw new Error(`Agent not found: ${id}`);
+    }
+    return agent;
+  }
+
+  delete(id: string): boolean {
+    return this.agents.delete(id);
+  }
+
+  clear(): void {
+    this.agents.clear();
+  }
+
+  list(): Agent[] {
+    return [...this.agents.values()];
+  }
+}
+
+export const agentManager = new AgentManager();

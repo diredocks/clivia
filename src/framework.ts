@@ -1,4 +1,4 @@
-import { Agent } from "@/agent";
+import { type Agent, agentManager } from "@/agent";
 import type { Channel } from "@/channel";
 import { type Context, contextManager } from "@/context";
 import type { LLM } from "@/llm";
@@ -14,8 +14,8 @@ import type {
 // TODO: heartbeat / cron
 
 export class Framework {
-  private agent: Agent;
   private queue: UserMessage[] = [];
+  private agent: Agent;
   private context: Context;
 
   constructor(
@@ -24,8 +24,7 @@ export class Framework {
   ) {
     if (!channel.prepare()) throw new Error("Failed to prepare channel");
     [, this.context] = contextManager.create([], "root");
-
-    this.agent = new Agent(this.llm, this.context);
+    [, this.agent] = agentManager.create(llm, this.context, "root");
 
     this.agent.events.on("assistant", (message) => this.onAssistant(message));
     this.agent.events.on("idle", () => this.flush());
@@ -87,12 +86,16 @@ export class Framework {
       }
       case "context.root": {
         this.channel.send(
-          `count=${this.context.messages.length} tool=${this.context.messages.filter((e) => e.role === "tool").length}`,
+          `messages=${this.context.messages.length} tool=${this.context.messages.filter((e) => e.role === "tool").length}`,
         );
         return true;
       }
-      case "status": {
-        this.channel.send(`${this.agent.State}`);
+      case "agent": {
+        this.channel.send(`count=${agentManager.list().length}`);
+        return true;
+      }
+      case "agent.root": {
+        this.channel.send(`status=${this.agent.State}`);
         return true;
       }
     }

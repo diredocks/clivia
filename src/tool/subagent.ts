@@ -1,4 +1,4 @@
-import { Agent } from "@/agent";
+import { agentManager } from "@/agent";
 import { contextManager } from "@/context";
 import type { LLM } from "@/llm";
 import type { ToolParameters } from "@/llm/types";
@@ -36,13 +36,13 @@ export class SubAgent extends ToolBase {
       throw new Error("Argument 'prompt' must be a non-empty string.");
     }
 
-    const [id, context] = contextManager.create([
+    const [ctxId, context] = contextManager.create([
       { role: "system", content: SUBAGENT_SYSTEM_PROMPT },
       { role: "user", content: prompt },
     ]);
     context.tools = context.tools.filter((t) => t.name !== "subagent");
 
-    const agent = new Agent(llm, context);
+    const [agtId, agent] = agentManager.create(llm, context);
     await agent.loop();
 
     const last = context.messages[context.messages.length - 1];
@@ -51,7 +51,8 @@ export class SubAgent extends ToolBase {
       throw new Error("Sub-agent returned empty result.");
     }
 
-    contextManager.delete(id);
+    contextManager.delete(ctxId);
+    agentManager.delete(agtId);
     return last.content;
   }
 }
