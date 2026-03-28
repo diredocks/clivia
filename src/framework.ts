@@ -2,30 +2,31 @@ import { type Agent, agentManager } from "@/agent";
 import type { Channel } from "@/channel";
 import { type Context, contextManager } from "@/context";
 import type { LLM } from "@/llm";
-import type { AssistantMessage, UserMessage } from "@/llm/types";
+import type { AssistantMessage, Message, UserMessage } from "@/llm/types";
 import { createLogFn } from "@/log";
 import { memoryStore } from "@/memory";
 
 // TODO: memory system and skill discovery
-// TODO: session save / reload
 // TODO: heartbeat / cron
 
 const SYSTEM_PROMPT = `
 You're clivia, an AI agent.
 Follow these rules:
 1. Reply as short as possible in user's language, no emoji.
-When calling tools: 
+When calling tools:
 2. Reply with an complete sentence without colon in the end
 3. Tell user what tool you called and your intension.
 `;
+
+const SYSTEM_MESSAGE: Message = { role: "system", content: SYSTEM_PROMPT };
 
 const log = createLogFn("framework");
 
 export class Framework {
   private queue: UserMessage[] = [];
   private flushing = false;
-  private agent: Agent;
-  private context: Context;
+  private agent!: Agent;
+  private context!: Context;
 
   constructor(
     readonly llm: LLM,
@@ -34,15 +35,20 @@ export class Framework {
     log("clivia, an experimental agent");
 
     if (!channel.prepare()) throw new Error("Failed to prepare channel");
-    const messages = memoryStore.load([
-      { role: "system", content: SYSTEM_PROMPT },
-    ]);
+    this.initialize(true);
+    this.channel.events.on("receive", (content) => this.onReceived(content));
+  }
+
+  private initialize(loadMemory = false) {
+    const messages = loadMemory
+      ? memoryStore.load([SYSTEM_MESSAGE])
+      : [SYSTEM_MESSAGE];
+
     [, this.context] = contextManager.create(messages, "root");
-    [, this.agent] = agentManager.create(llm, this.context, "root");
+    [, this.agent] = agentManager.create(this.llm, this.context, "root");
 
     this.agent.events.on("assistant", (message) => this.onAssistant(message));
     this.agent.events.on("idle", () => this.flush());
-    this.channel.events.on("receive", (content) => this.onReceived(content));
   }
 
   async onAssistant(message: AssistantMessage) {
@@ -105,6 +111,10 @@ export class Framework {
         this.channel.send(`status=${this.agent.State}`);
         return true;
       }
+      case "restart": {
+        this.restart();
+        return true;
+      }
     }
     this.channel.send(`unknown action "${action}"`);
     return true;
@@ -113,6 +123,24 @@ export class Framework {
   start() {
     this.channel.start();
     log("start");
+  }
+
+  restart() {
+    log("restarting");
+
+    memoryStore.save(this.context.messages);
+    this.agent.close();
+    agentManager.clear();
+    contextManager.clear();
+    contextManager.resetController();
+
+    this.queue = [];
+    this.flushing = false;
+
+    this.initialize(true);
+    this.channel.send("restarted");
+
+    log("restarted");
   }
 
   close() {

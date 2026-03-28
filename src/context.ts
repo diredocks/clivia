@@ -54,6 +54,11 @@ export class ContextManager {
     this.contexts.clear();
   }
 
+  resetController(): void {
+    this.controller = new AbortController();
+    log("abort controller reset");
+  }
+
   list(): Context[] {
     return [...this.contexts.values()];
   }
