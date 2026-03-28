@@ -9,6 +9,15 @@ import { createLogFn } from "@/log";
 // TODO: session save / reload
 // TODO: heartbeat / cron
 
+const SYSTEM_PROMPT = `
+You're clivia, an AI agent.
+Follow these rules:
+1. Reply as short as possible in user's language, no emoji.
+When calling tools: 
+2. Reply with an complete sentence without colon in the end
+3. Tell user what tool you called and your intension.
+`;
+
 const log = createLogFn("framework");
 
 export class Framework {
@@ -24,7 +33,10 @@ export class Framework {
     log("clivia, an experimental agent");
 
     if (!channel.prepare()) throw new Error("Failed to prepare channel");
-    [, this.context] = contextManager.create([], "root");
+    [, this.context] = contextManager.create(
+      [{ role: "system", content: SYSTEM_PROMPT }],
+      "root",
+    );
     [, this.agent] = agentManager.create(llm, this.context, "root");
 
     this.agent.events.on("assistant", (message) => this.onAssistant(message));
