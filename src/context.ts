@@ -1,14 +1,14 @@
 import type { Message } from "@/llm/types";
 import { createLogFn } from "@/log";
 import type { ToolBase } from "@/tool";
-import { ExecTool } from "@/tool/exec";
+import { BashTool } from "@/tool/bash";
 import { SubAgent } from "@/tool/subagent";
 
 const log = createLogFn("context");
 
 export class Context {
   readonly messages: Message[];
-  public tools: ToolBase[] = [new ExecTool(), new SubAgent()];
+  public tools: ToolBase[] = [new BashTool("yolo", "1001"), new SubAgent()];
 
   constructor(
     readonly abortController: AbortController,

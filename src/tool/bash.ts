@@ -3,10 +3,10 @@ import { ToolBase } from "@/tool";
 
 // TODO: timeout, background, black and white list
 
-export class ExecTool extends ToolBase {
-  readonly name = "exec";
+export class BashTool extends ToolBase {
+  readonly name = "bash";
   readonly description =
-    "Execute a shell command in the current working directory and return its result.";
+    "Execute a shell command in a container and return its result.";
   readonly parameters: ToolParameters = {
     type: "object",
     properties: {
@@ -17,6 +17,23 @@ export class ExecTool extends ToolBase {
     },
     required: ["command"],
   };
+  private readonly commandPrefix: string[];
+
+  constructor(containerName: string, userId: string) {
+    super();
+    this.commandPrefix = [
+      "incus",
+      "exec",
+      containerName,
+      "--user",
+      userId,
+      "--pwd",
+      "/tmp",
+      "--",
+      "bash",
+      "-lc",
+    ];
+  }
 
   override async execute(args: Record<string, unknown>): Promise<string> {
     const { command } = args;
@@ -25,7 +42,7 @@ export class ExecTool extends ToolBase {
       throw new Error("Argument 'command' must be a non-empty string.");
     }
 
-    const proc = Bun.spawn(["sh", "-lc", command], {
+    const proc = Bun.spawn([...this.commandPrefix, command], {
       cwd: process.cwd(),
       stdout: "pipe",
       stderr: "pipe",
