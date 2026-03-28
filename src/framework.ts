@@ -2,19 +2,18 @@ import { type Agent, agentManager } from "@/agent";
 import type { Channel } from "@/channel";
 import { type Context, contextManager } from "@/context";
 import type { LLM } from "@/llm";
-import type {
-  AssistantMessage,
-  ToolCall,
-  ToolMessage,
-  UserMessage,
-} from "@/llm/types";
+import type { AssistantMessage, UserMessage } from "@/llm/types";
+import { createLogFn } from "@/log";
 
 // TODO: memory system and skill discovery
 // TODO: session save / reload
 // TODO: heartbeat / cron
 
+const log = createLogFn("framework");
+
 export class Framework {
   private queue: UserMessage[] = [];
+  private flushing = false;
   private agent: Agent;
   private context: Context;
 
@@ -22,14 +21,14 @@ export class Framework {
     readonly llm: LLM,
     readonly channel: Channel,
   ) {
+    log("clivia, an experimental agent");
+
     if (!channel.prepare()) throw new Error("Failed to prepare channel");
     [, this.context] = contextManager.create([], "root");
     [, this.agent] = agentManager.create(llm, this.context, "root");
 
     this.agent.events.on("assistant", (message) => this.onAssistant(message));
     this.agent.events.on("idle", () => this.flush());
-    this.agent.events.on("toolCall", (call) => this.onToolCall(call));
-    this.agent.events.on("toolResult", (message) => this.onToolResult(message));
     this.channel.events.on("receive", (content) => this.onReceived(content));
   }
 
@@ -45,23 +44,20 @@ export class Framework {
   }
 
   private async flush() {
+    if (this.flushing) return;
     if (this.agent.State === "loop") return;
     if (this.queue.length === 0) return;
 
+    this.flushing = true;
+    log(`flush in queue=${this.queue.length}`);
     this.context.messages.push(...this.queue);
     this.queue = [];
 
     await this.agent.loop();
-  }
+    log(`flush out queue=${this.queue.length}`);
+    this.flushing = false;
 
-  private async onToolCall(call: ToolCall) {
-    this.channel.send(
-      `tool.call id=${call.id} name=${call.name} args=${call.arguments}`,
-    );
-  }
-
-  private async onToolResult(message: ToolMessage) {
-    this.channel.send(`tool.result id=${message.toolCallId}`);
+    if (this.queue.length > 0) void this.flush();
   }
 
   actions(content: string) {
@@ -103,11 +99,13 @@ export class Framework {
 
   start() {
     this.channel.start();
+    log("start");
   }
 
   close() {
     contextManager.clear();
     this.agent.close();
     this.channel.close();
+    log("closed");
   }
 }

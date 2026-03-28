@@ -8,6 +8,9 @@ import type {
   ToolMessage,
   ToolResult,
 } from "@/llm/types";
+import { createLogFn } from "@/log";
+
+const log = createLogFn("agent");
 
 export type AgentEvents = {
   assistant: (message: AssistantMessage) => void | Promise<void>;
@@ -68,13 +71,16 @@ export class Agent {
   }
 
   async loop() {
-    this.switch("loop");
+    log("loop in");
+    this.state = "loop";
     while (this.state === "loop") {
       await this.iteration();
     }
+    log("loop out");
   }
 
   private async handleToolCalls(call: ToolCall) {
+    log(`toolCall id=${call.id} name=${call.name}`);
     this.events.emit("toolCall", call);
     const message = {
       role: "tool",
@@ -92,9 +98,13 @@ export class Agent {
 
     this.context.messages.push(message);
     this.events.emit("toolResult", message);
+    log(
+      `toolCall id=${message.toolCallId} result=${message.content.slice(0, 20).trim()}...`,
+    );
   }
 
   private switch(target: AgentStates) {
+    log(`state ${this.state} -> ${target}`);
     this.state = target;
     this.events.emit(target);
   }
@@ -115,6 +125,7 @@ export class AgentManager {
     const Id = id ?? crypto.randomUUID();
     const agent = new Agent(llm, context);
     this.agents.set(Id, agent);
+    log(`agent ${Id} created`);
     return [Id, agent];
   }
 
@@ -131,6 +142,7 @@ export class AgentManager {
   }
 
   delete(id: string): boolean {
+    log(`agent ${id} deleted`);
     return this.agents.delete(id);
   }
 

@@ -1,7 +1,10 @@
 import type { Message } from "@/llm/types";
+import { createLogFn } from "@/log";
 import type { ToolBase } from "@/tool";
 import { ExecTool } from "@/tool/exec";
 import { SubAgent } from "@/tool/subagent";
+
+const log = createLogFn("context");
 
 export class Context {
   readonly messages: Message[];
@@ -25,6 +28,7 @@ export class ContextManager {
     const Id = id ?? crypto.randomUUID();
     const context = new Context(this.controller, messages);
     this.contexts.set(Id, context);
+    log(`context ${Id} created`);
     return [Id, context];
   }
 
@@ -41,10 +45,12 @@ export class ContextManager {
   }
 
   delete(id: string): boolean {
+    log(`context ${id} deleted`);
     return this.contexts.delete(id);
   }
 
   clear(): void {
+    log("contexts cleared");
     this.contexts.clear();
   }
 
