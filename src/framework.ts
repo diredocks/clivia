@@ -4,6 +4,7 @@ import { type Context, contextManager } from "@/context";
 import type { LLM } from "@/llm";
 import type { AssistantMessage, UserMessage } from "@/llm/types";
 import { createLogFn } from "@/log";
+import { memoryStore } from "@/memory";
 
 // TODO: memory system and skill discovery
 // TODO: session save / reload
@@ -33,10 +34,10 @@ export class Framework {
     log("clivia, an experimental agent");
 
     if (!channel.prepare()) throw new Error("Failed to prepare channel");
-    [, this.context] = contextManager.create(
-      [{ role: "system", content: SYSTEM_PROMPT }],
-      "root",
-    );
+    const messages = memoryStore.load([
+      { role: "system", content: SYSTEM_PROMPT },
+    ]);
+    [, this.context] = contextManager.create(messages, "root");
     [, this.agent] = agentManager.create(llm, this.context, "root");
 
     this.agent.events.on("assistant", (message) => this.onAssistant(message));
@@ -115,6 +116,7 @@ export class Framework {
   }
 
   close() {
+    memoryStore.save(this.context.messages);
     contextManager.clear();
     this.agent.close();
     this.channel.close();
