@@ -1,8 +1,6 @@
 import type { ToolParameters } from "@/llm/types";
 import { ToolBase } from "@/tool";
 
-// TODO: timeout, background, black and white list
-
 export class BashTool extends ToolBase {
   readonly name = "bash";
   readonly description =
@@ -27,11 +25,13 @@ export class BashTool extends ToolBase {
       containerName,
       "--user",
       userId,
-      "--pwd",
+      "--cwd",
       "/tmp",
+      "--env",
+      "HOME=/home/yolo",
       "--",
       "bash",
-      "-lc",
+      "-c",
     ];
   }
 
@@ -42,11 +42,14 @@ export class BashTool extends ToolBase {
       throw new Error("Argument 'command' must be a non-empty string.");
     }
 
-    const proc = Bun.spawn([...this.commandPrefix, command], {
-      cwd: process.cwd(),
-      stdout: "pipe",
-      stderr: "pipe",
-    });
+    const proc = Bun.spawn(
+      [...this.commandPrefix, `source /home/yolo/.bashrc && ${command}`],
+      {
+        cwd: process.cwd(),
+        stdout: "pipe",
+        stderr: "pipe",
+      },
+    );
 
     const [stdout, _stderr, _exitCode] = await Promise.all([
       new Response(proc.stdout).text(),

@@ -5,11 +5,11 @@ import type { LLM } from "@/llm";
 import type { AssistantMessage, Message, UserMessage } from "@/llm/types";
 import { createLogFn } from "@/log";
 import { memoryStore } from "@/memory";
+import { discoverSkills, renderSkillsPrompt } from "@/skill";
 
-// TODO: memory system and skill discovery
 // TODO: heartbeat / cron
 
-const SYSTEM_PROMPT = `
+const BASE_SYSTEM_PROMPT = `
 You're clivia, an AI agent.
 Follow these rules:
 1. Reply as short as possible in user's language, no emoji.
@@ -18,9 +18,21 @@ When calling tools:
 3. Tell user what tool you called and your intension.
 `;
 
-const SYSTEM_MESSAGE: Message = { role: "system", content: SYSTEM_PROMPT };
-
 const log = createLogFn("framework");
+
+function createSystemMessage(): Message {
+  const skills = discoverSkills();
+  const skillsPrompt = renderSkillsPrompt(
+    skills,
+    skills.map((skill) => skill.name),
+  );
+
+  const content = [BASE_SYSTEM_PROMPT.trim(), skillsPrompt]
+    .filter(Boolean)
+    .join("\n\n");
+
+  return { role: "system", content };
+}
 
 export class Framework {
   private queue: UserMessage[] = [];
@@ -40,9 +52,10 @@ export class Framework {
   }
 
   private initialize(loadMemory = false) {
+    const systemMessage = createSystemMessage();
     const messages = loadMemory
-      ? memoryStore.load([SYSTEM_MESSAGE])
-      : [SYSTEM_MESSAGE];
+      ? memoryStore.load([systemMessage])
+      : [systemMessage];
 
     [, this.context] = contextManager.create(messages, "root");
     [, this.agent] = agentManager.create(this.llm, this.context, "root");
