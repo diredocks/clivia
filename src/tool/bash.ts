@@ -31,7 +31,7 @@ export class BashTool extends ToolBase {
       "HOME=/home/yolo",
       "--",
       "bash",
-      "-c",
+      "-lc",
     ];
   }
 
@@ -43,7 +43,7 @@ export class BashTool extends ToolBase {
     }
 
     const proc = Bun.spawn(
-      [...this.commandPrefix, `source /home/yolo/.bashrc && ${command}`],
+      [...this.commandPrefix, command],
       {
         cwd: process.cwd(),
         stdout: "pipe",
