@@ -92,9 +92,18 @@ export class Framework {
     if (this.queue.length > 0) void this.flush();
   }
 
-  actions(content: string) {
-    if (!content.startsWith(",")) return false;
+  static isAction(content: string): boolean {
+    return content.startsWith(",") || content.startsWith("/");
+  }
+
+  static normalizeAction(content: string): string {
     const action = content.slice(1);
+    return action.replace("_", ".");
+  }
+
+  actions(content: string) {
+    if (!Framework.isAction(content)) return false;
+    const action = Framework.normalizeAction(content);
     switch (action) {
       case "quit":
       case "exit":

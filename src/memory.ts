@@ -24,7 +24,8 @@ export class MemoryStore {
       .split("\n")
       .map((line) => line.trim())
       .filter(Boolean)
-      .map((line) => JSON.parse(line) as Message);
+      .map((line) => JSON.parse(line) as Message)
+      .filter((message) => message.role !== "tool" && !message.toolCalls);
 
     if (messages.length > 0) {
       log(`load hit path=${this.filePath} messages=${messages.length}`);

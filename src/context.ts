@@ -8,7 +8,7 @@ const log = createLogFn("context");
 
 export class Context {
   readonly messages: Message[];
-  public tools: ToolBase[] = [new BashTool("yolo", "1001"), new SubAgent()];
+  public tools: ToolBase[] = [new BashTool("clivia", "1001"), new SubAgent()];
 
   constructor(
     readonly abortController: AbortController,

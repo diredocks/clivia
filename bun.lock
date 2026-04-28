@@ -6,6 +6,7 @@
       "name": "clivia",
       "dependencies": {
         "gramio": "^0.8.1",
+        "marked": "^18.0.2",
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -41,6 +42,8 @@
     "gramio": ["gramio@0.8.1", "", { "dependencies": { "@gramio/callback-data": "^0.1.0", "@gramio/composer": "0.4.1", "@gramio/contexts": "^0.5.0", "@gramio/files": "^0.3.2", "@gramio/format": "^0.5.0", "@gramio/keyboards": "^1.3.1", "@gramio/types": "^9.5.0", "debug": "^4.4.3" } }, "sha512-WTrG875F0cxV5KyrD8hDlPPTBzu1hiu2qzOgLrlarXozexUxrVHXKKzGxVQMRBsON7rrLCgSAYItCbMwpFNx8A=="],
 
     "inspectable": ["inspectable@3.0.2", "", {}, "sha512-XHygPjNXXe1TWQLlVdCYLejUklsGGo+XWS3Cn/RlkvnhkbZqcQxoXPrSh7Via5aATYJUMWVnrD5CbW2c+BtKMA=="],
+
+    "marked": ["marked@18.0.2", "", { "bin": { "marked": "bin/marked.js" } }, "sha512-NsmlUYBS/Zg57rgDWMYdnre6OTj4e+qq/JS2ot3KrYLSoHLw+sDu0Nm1ZGpRgYAq6c+b1ekaY5NzVchMCQnzcg=="],
 
     "ms": ["ms@2.1.3", "", {}, "sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA=="],
 
